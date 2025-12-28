@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>JM Moda Evangélica | Instagram</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                pink: '#E91E63',
+                deepPink: '#880E4F',
+                black: '#000000',
+                igGray: '#DBDBDB',
+                igBg: '#FAFAFA',
+                igBlue: '#0095f6'
+              }
+            },
+            fontFamily: {
+              sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+            },
+            animation: {
+              marquee: 'marquee 20s linear infinite',
+              'marquee-text': 'marquee-text 10s linear infinite',
+              'spin-slow': 'spin 3s linear infinite',
+            },
+            keyframes: {
+              marquee: {
+                '0%': { transform: 'translateX(100%)' },
+                '100%': { transform: 'translateX(-100%)' },
+              },
+              'marquee-text': {
+                '0%': { transform: 'translateX(0%)' },
+                '100%': { transform: 'translateX(-100%)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background: linear-gradient(180deg, #E91E63 0%, #310816 60%, #000000 100%);
+        background-attachment: fixed;
+        -webkit-tap-highlight-color: transparent;
+        overflow-x: hidden;
+      }
+      .ig-grid-item::after {
+        content: "";
+        display: block;
+        padding-bottom: 100%;
+      }
+      /* Esconder barra de rolagem mas manter funcionalidade */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      /* Previne o bounce do scroll no iOS */
+      html, body {
+        height: 100%;
+        width: 100%;
+        position: fixed;
+        overflow: hidden;
+      }
+      #root {
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
