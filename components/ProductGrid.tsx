@@ -24,7 +24,8 @@ interface ProductGridProps {
   onFollowClick?: () => void;
   products: Product[];
   isLoading: boolean;
-  supabase: any;
+  apiUrl: string;
+  onRefreshProducts: () => void;
 }
 
 export const ProductGrid: React.FC<ProductGridProps> = ({ 
@@ -38,7 +39,8 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   onFollowClick,
   products,
   isLoading,
-  supabase
+  apiUrl,
+  onRefreshProducts
 }) => {
   const [localLikes, setLocalLikes] = useState<Record<number, boolean>>({});
   const [likeCounts, setLikeCounts] = useState<Record<number, number>>({});
@@ -64,27 +66,19 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   const loadRecentComments = async () => {
     setLoadingRecent(true);
     try {
-      const { data, error } = await supabase
-        .from('jm_comments')
-        .select(`
-          id, text, created_at, product_id,
-          jm_clients (first_name),
-          jm_products (name, imageUrl)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (!error && data) {
+      const response = await fetch(`${apiUrl}?action=get_comments`);
+      const data = await response.json();
+      if (Array.isArray(data)) {
         const formatted = data.map((c: any) => ({
           id: c.id,
           text: c.text,
-          client_name: c.jm_clients?.first_name || "Membro VIP",
+          client_name: c.first_name || "Membro VIP",
           created_at: c.created_at,
           product_id: c.product_id,
-          product_name: c.jm_products?.name,
-          product_image: c.jm_products?.imageUrl
+          product_name: c.product_name,
+          product_image: c.product_image
         }));
-        setRecentComments(formatted);
+        setRecentComments(formatted.slice(0, 10));
       }
     } catch (e) {
       console.error("Erro ao buscar feed de comentários:", e);
@@ -97,25 +91,20 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     const counts: Record<number, number> = {};
     products.forEach(p => {
       // @ts-ignore
-      counts[p.id] = p.likes_count || 0;
+      counts[p.id] = parseInt(p.likes_count || 0);
     });
     setLikeCounts(counts);
 
     try {
-      const { data: commentsData } = await supabase
-        .from('jm_comments')
-        .select(`
-          id, text, created_at, product_id,
-          jm_clients (first_name)
-        `)
-        .order('created_at', { ascending: true });
+      const response = await fetch(`${apiUrl}?action=get_comments`);
+      const commentsData = await response.json();
 
       const cMap: Record<number, Comment[]> = {};
       commentsData?.forEach((c: any) => {
         const formatted = {
           id: c.id,
           text: c.text,
-          client_name: c.jm_clients?.first_name || "Anônimo",
+          client_name: c.first_name || "Anônimo",
           created_at: c.created_at,
           product_id: c.product_id
         };
@@ -130,17 +119,18 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
   const handleLike = async (productId: number) => {
     const isCurrentlyLiked = localLikes[productId];
+    const currentCount = likeCounts[productId] || 0;
+    const newCount = isCurrentlyLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
+
     setLocalLikes(prev => ({ ...prev, [productId]: !isCurrentlyLiked }));
-    setLikeCounts(prev => ({ ...prev, [productId]: (prev[productId] || 0) + (isCurrentlyLiked ? -1 : 1) }));
+    setLikeCounts(prev => ({ ...prev, [productId]: newCount }));
 
     try {
-      const currentCount = likeCounts[productId] || 0;
-      const newCount = isCurrentlyLiked ? Math.max(0, currentCount - 1) : currentCount + 1;
-
-      await supabase
-        .from('jm_products')
-        .update({ likes_count: newCount })
-        .eq('id', productId);
+      await fetch(`${apiUrl}?action=update_likes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, count: newCount })
+      });
     } catch (e) {
       console.error("Erro ao processar clique público.");
     }
@@ -151,24 +141,22 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     if (!onCommentAttempt() || !newComment.trim()) return;
 
     try {
-      const { data, error } = await supabase
-        .from('jm_comments')
-        .insert([{
+      const response = await fetch(`${apiUrl}?action=post_comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           client_id: clientId,
           product_id: productId,
           text: newComment
-        }])
-        .select(`
-          id, text, created_at, product_id,
-          jm_clients (first_name)
-        `)
-        .single();
+        })
+      });
+      const data = await response.json();
 
-      if (!error && data) {
+      if (data && data.id) {
         const formatted = {
           id: data.id,
           text: data.text,
-          client_name: data.jm_clients.first_name,
+          client_name: data.first_name,
           created_at: data.created_at,
           product_id: data.product_id
         };
@@ -200,7 +188,6 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
   return (
     <section className={`bg-white max-w-[600px] mx-auto w-full ${activeTab === 'reels' ? 'h-[calc(100vh-96px)]' : ''}`}>
-      {/* IG Tab Bar */}
       {activeTab !== 'search' && (
         <div className="flex border-t border-[#DBDBDB]/50 sticky top-[44px] bg-white z-40">
           <button onClick={() => onTabChange('grid')} className={`flex-1 flex justify-center py-3.5 transition-colors ${activeTab === 'grid' ? 'border-t-[1.5px] border-black mt-[-1.5px] text-black' : 'text-[#8e8e8e]'}`}>
@@ -261,7 +248,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                     <span className="font-bold text-[14px]">jm_moda_evangelica</span>
                   </div>
                   <h3 className="text-[14px] font-semibold mb-2 drop-shadow-sm">{product.name}</h3>
-                  <p className="text-white/80 text-xs mb-4">R$ {product.price.toFixed(2)} - Peça Premium</p>
+                  <p className="text-white/80 text-xs mb-4">R$ {Number(product.price).toFixed(2)} - Peça Premium</p>
                   <a href={`https://wa.me/5571991192907?text=Quero comprar o ${product.name}`} target="_blank" className="w-full h-[40px] flex items-center justify-center bg-white text-black rounded-[8px] text-[14px] font-bold no-underline active:scale-95 transition-all shadow-lg hover:bg-gray-100">
                     <ShoppingCart className="w-4 h-4 mr-2" /> Comprar Agora
                   </a>
@@ -388,7 +375,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                 </div>
                 <h4 className="font-bold text-xs truncate text-gray-800">{p.name}</h4>
                 <div className="flex items-center justify-between mt-1">
-                   <p className="text-brand-pink font-black text-sm">R$ {p.price.toFixed(2)}</p>
+                   <p className="text-brand-pink font-black text-sm">R$ {Number(p.price).toFixed(2)}</p>
                    <div className="flex items-center text-[10px] text-gray-400">
                       <Heart className="w-3 h-3 mr-0.5 fill-gray-200 text-gray-200" />
                       {/* @ts-ignore */}
