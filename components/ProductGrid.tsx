@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Grid, User, PlaySquare, Heart, MessageCircle, Send, MoreVertical, ShoppingCart, X, Search as SearchIcon, Clock, ChevronRight } from 'lucide-react';
+import { Grid, User, PlaySquare, Heart, MessageCircle, Send, MoreVertical, ShoppingCart, X, Search as SearchIcon, Clock, ChevronRight, Volume2 } from 'lucide-react';
 import { TabType } from '../App';
 import { Product } from '../types';
 
@@ -50,6 +50,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   const [activeCommentReel, setActiveCommentReel] = useState<number | null>(null);
   const [newComment, setNewComment] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
     if (products.length > 0) {
@@ -207,6 +208,11 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
           {filteredProducts.map(p => (
             <div key={p.id} className="aspect-square bg-white cursor-pointer relative group" onClick={() => onTabChange('reels')}>
               <img src={p.imageUrl} className="w-full h-full object-cover" loading="lazy" />
+              {p.videoUrl && (
+                <div className="absolute top-1.5 right-1.5 text-white drop-shadow-md">
+                   <PlaySquare className="w-4 h-4" />
+                </div>
+              )}
               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                  <Heart className="w-6 h-6 text-white fill-white/50" />
               </div>
@@ -223,8 +229,21 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
             const currentComments = commentsMap[product.id] || [];
 
             return (
-              <div key={product.id} className="relative w-full h-full flex-shrink-0 snap-start bg-black">
-                <img src={product.imageUrl} className="w-full h-full object-contain" />
+              <div key={product.id} className="relative w-full h-full flex-shrink-0 snap-start bg-black flex flex-col justify-center overflow-hidden">
+                {product.videoUrl ? (
+                  <video 
+                    src={product.videoUrl} 
+                    className="w-full h-full object-cover" 
+                    autoPlay 
+                    loop 
+                    muted={isMuted} 
+                    playsInline 
+                    onClick={() => setIsMuted(!isMuted)}
+                  />
+                ) : (
+                  <img src={product.imageUrl} className="w-full h-full object-contain" />
+                )}
+                
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none"></div>
 
                 <div className="absolute right-3 bottom-24 flex flex-col items-center space-y-6 text-white z-20">
@@ -241,6 +260,12 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                   <Send className="w-[26px] h-[26px]" />
                   <MoreVertical className="w-6 h-6" />
                 </div>
+
+                {product.videoUrl && (
+                  <div className="absolute top-4 right-4 z-20 text-white/50" onClick={() => setIsMuted(!isMuted)}>
+                     <Volume2 className={`w-5 h-5 ${isMuted ? 'opacity-30' : 'opacity-100'}`} />
+                  </div>
+                )}
 
                 <div className="absolute left-4 bottom-10 text-white w-[80%] z-20">
                   <div className="flex items-center mb-4">
